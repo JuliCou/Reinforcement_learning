@@ -12,3 +12,5 @@ Cette partie utilise la librairie PyTorch pour entrainer un réseau de neurones 
 
 ## Troisième partie : DQN avec l'image du jeu en entrée
 ![Représentation de l'image en entrée](DQN%20entree%20image/test.jpg "Représentation de l'image en entrée")
+On reprend le projet développé en deuxième partie, mais cette fois-ci en placant en entré une image qui représente la grille de jeu (case grise) avec une case colorée (en vert) représentant la position actuelle. C'est l'état.   
+Le ![tutoriel](https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html) a été utilisé pour développer cette partie.
