@@ -1,0 +1,23 @@
+juliette.courgibet@FR-L4648312 MINGW64 ~/Documents/cours CNAM/3A/donnees_non_numeriques/reinforcement_learning
+$ python deep_reinforcement_img.py
+[[ 0.  0.  0. -1. -1. -1.  0.]
+ [ 0.  0. -1. -1.  0. -1.  0.]
+ [ 0. -1.  0.  0.  0.  0. -1.]
+ [ 0.  0. -1.  0.  0.  0. -1.]
+ [-1.  0.  0.  0.  0.  0.  0.]
+ [-1. -1.  0.  0. -1. -1.  0.]
+ [ 0.  1.  0.  0.  0.  0.  0.]]
+Epoch  50  - réussite :  0.0
+Epoch  100  - réussite :  0.02
+Epoch  150  - réussite :  0.14
+Epoch  200  - réussite :  0.24
+Epoch  250  - réussite :  0.54
+Epoch  300  - réussite :  0.92
+0
+tensor([[-4.6040,  0.1319,  0.2826, -4.5246]], grad_fn=<AddmmBackward>)
+tensor([[ 0.1469,  0.1291,  0.5607, -4.1778]], grad_fn=<AddmmBackward>)
+tensor([[ 0.2044, -6.5252,  1.7689, -4.1088]], grad_fn=<AddmmBackward>)
+tensor([[ 0.5941,  5.2349, -6.8098, -2.8691]], grad_fn=<AddmmBackward>)
+tensor([[-6.9184, -6.9790,  8.6527,  1.7744]], grad_fn=<AddmmBackward>)
+tensor([[ 5.0536,  5.7860, 13.9261, -6.0915]], grad_fn=<AddmmBackward>)
+tensor([[ 9.4664,  7.2177, 51.2286, -5.4563]], grad_fn=<AddmmBackward>)
