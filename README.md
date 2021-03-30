@@ -11,7 +11,7 @@ On change le paramètre taille_grille (ligne 74) et le nombre de dragons, 2ème 
 Cette partie utilise la librairie PyTorch pour entrainer un réseau de neurones à une entrée, représentant l'état du jeu et 4 sorties, (pour les 4 actions possibles).
 
 ## Troisième partie : DQN avec l'image du jeu en entrée
-![Représentation de l'image en entrée](DQN%20entree%20image/test.jpg | width=100)
+<img src=DQN%20entree%20image/test.jpg  width="120">
 
 
 On reprend le projet développé en deuxième partie, mais cette fois-ci en placant en entré une image qui représente la grille de jeu (case grise) avec une case colorée (en vert) représentant la position actuelle. C'est l'état.   
