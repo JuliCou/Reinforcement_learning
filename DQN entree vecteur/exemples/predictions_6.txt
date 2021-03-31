@@ -1,0 +1,6 @@
+tensor([[-16.7230, -19.9853,   1.7111, -16.2849]], grad_fn=<AddmmBackward>)
+tensor([[  1.5319, -19.9528,   1.5764, -17.1463]], grad_fn=<AddmmBackward>)
+tensor([[  1.3277,   1.3096,   2.0006, -15.9128]], grad_fn=<AddmmBackward>)
+tensor([[-2.3615,  3.9168, -6.2787, -6.2476]], grad_fn=<AddmmBackward>)
+tensor([[-3.9926,  6.2982, -5.6969, -2.6758]], grad_fn=<AddmmBackward>)
+tensor([[-5.9940, 15.5548, -8.8761, -4.3127]], grad_fn=<AddmmBackward>)
