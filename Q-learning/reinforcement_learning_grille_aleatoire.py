@@ -5,6 +5,8 @@ import cv2
 import random
 import time
 import imageio
+from PIL import Image
+
 
 
 def generate_grille_jeu(taille_grille=4, nb_dragons=4, starting_position=(0, 0)):
@@ -55,7 +57,7 @@ def application_action(grille_jeu, a, pos_i):
             pos_t[1] -= 1
     # Interaction environnement
     if grille_jeu[pos_t[0]][pos_t[1]] == -1:  # dragons
-        reward = -10
+        reward = -50
         fin = True
     elif grille_jeu[pos_t[0]][pos_t[1]] == 1:
         reward = 100
@@ -64,41 +66,29 @@ def application_action(grille_jeu, a, pos_i):
         fin = False
         reward = 0
         if pos_t == pos_i:
-            reward = -10
+            reward = -2
         else:
-            reward = -1
+            reward = -0.1
     return pos_t, reward, fin
 
 
+def choix_action(matrix_Q, q_etat, liste_actions, eps):
+    p_action = random.random()
+    if p_action < eps:
+        return random.choice(liste_actions)
+    else:
+        a_t = np.where(matrix_Q[q_etat]==max(matrix_Q[q_etat]))[0]
+        if a_t.shape[0] > 1:
+            a_t = random.choice(a_t)
+        else:
+            a_t = a_t.item()
+        return a_t
+
+
 # 
-taille_grille = 10
+taille_grille = 20
 starting_pos = [0, 0]
-grille_jeu = generate_grille_jeu(taille_grille, 20, starting_pos)
-
-# Paramètres
-matrix_Q = np.random.randn(taille_grille ** 2, 4)
-lr = 0.81
-gamma_futur = 0.96
-
-actions = [0, 1, 2, 3]
-
-for partie in range(10000):
-    nb_couts = 0
-    fin = False
-    pos = copy.copy(starting_pos)
-    while nb_couts < 100 and not(fin):
-        nb_couts += 1
-        # Random choice of action
-        q_etat = int(taille_grille*pos[0] + pos[1])
-        a_t = random.choice(actions)
-        # Application de l'action et observation suite à l'action
-        pos_future, reward, fin = application_action(grille_jeu, a_t, pos)
-        # Update Q and new_pos
-        q_etat_futur = int(taille_grille*pos_future[0] + pos_future[1])
-        matrix_Q[q_etat][a_t] += lr * (reward + gamma_futur*max(matrix_Q[q_etat_futur]) - matrix_Q[q_etat][a_t])
-        pos = pos_future
-
-
+grille_jeu = generate_grille_jeu(taille_grille, 100, starting_pos)
 
 # Initial picture
 taille_ideale = 500
@@ -122,6 +112,36 @@ for i_drag in range(len(dragon_positions_length)):
 winning_pos_y, winning_pos_x = np.where(grille_jeu==1)[0][0], np.where(grille_jeu==1)[1][0]
 img[(longueur_case*winning_pos_y+1):(longueur_case*(winning_pos_y+1)-1), (longueur_case*winning_pos_x+1):(longueur_case*(winning_pos_x+1) -1), :] = np.array([255, 255, 255])
 
+im = Image.fromarray(img)
+im.save("grille_jeu.jpeg")
+
+# Paramètres
+matrix_Q = np.random.randn(taille_grille ** 2, 4)
+lr = 0.01
+gamma_futur = 1
+
+actions = [0, 1, 2, 3]
+epochs = 1000000
+
+
+for partie in range(epochs):
+    fin = False
+    pos = copy.copy(starting_pos)
+    nb_couts = 0
+    while nb_couts < 500 and not(fin):
+        nb_couts += 1
+        # Random choice of action
+        q_etat = int(taille_grille*pos[0] + pos[1])
+        eps = epochs/(epochs+partie)
+        a_t = choix_action(matrix_Q, q_etat, actions, eps)
+        # Application de l'action et observation suite à l'action
+        pos_future, reward, fin = application_action(grille_jeu, a_t, pos)
+        # Update Q and new_pos
+        q_etat_futur = int(taille_grille*pos_future[0] + pos_future[1])
+        matrix_Q[q_etat][a_t] += lr * (reward + gamma_futur*max(matrix_Q[q_etat_futur]*(1-fin)) - matrix_Q[q_etat][a_t])
+        pos = pos_future
+
+
 # Initial position and parameters
 pos = [0, 0]
 fin = False
@@ -135,7 +155,7 @@ images = [img_t]
 
 
 # Test the values
-while not(fin) and nb_couts < 100:
+while not(fin) and nb_couts < 500:
     # start_time = time.time()
     nb_couts += 1
     q_etat = int(taille_grille*pos[0] + pos[1])
@@ -150,4 +170,4 @@ while not(fin) and nb_couts < 100:
     img_t[(longueur_case*pos[0]+1):(longueur_case*(pos[0]+1)-1), (longueur_case*pos[1]+1):(longueur_case*(pos[1]+1)-1), :] = np.array([100, 255, 100])
     images.append(img_t)
 
-imageio.mimsave("partie_grille10x10_aleatoire.gif", images)
+imageio.mimsave("partie_grille20x20_aleatoire.gif", images)

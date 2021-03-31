@@ -100,7 +100,7 @@ for partie in range(10000):
         pos_future, reward, fin = application_action(grille_jeu, a_t, pos)
         # Update Q and new_pos
         q_etat_futur = int(taille_grille*pos_future[0] + pos_future[1])
-        matrix_Q[q_etat][a_t] += lr * (reward + gamma_futur*max(matrix_Q[q_etat_futur]) - matrix_Q[q_etat][a_t])
+        matrix_Q[q_etat][a_t] += lr * (reward + gamma_futur*max(matrix_Q[q_etat_futur]*(1-fin)) - matrix_Q[q_etat][a_t])
         pos = pos_future
 
 
@@ -128,7 +128,7 @@ winning_pos_y, winning_pos_x = np.where(grille_jeu==1)[0][0], np.where(grille_je
 img[(longueur_case*winning_pos_y+1):(longueur_case*(winning_pos_y+1)-1), (longueur_case*winning_pos_x+1):(longueur_case*(winning_pos_x+1) -1), :] = np.array([255, 255, 255])
 
 # Initial position and parameters
-pos = [0, 3]
+pos = [0, 0]
 fin = False
 nb_couts = 0
 tps_attente = 1
@@ -138,11 +138,7 @@ img_t = copy.copy(img)
 img_t[(longueur_case*pos[0]+1):(longueur_case*(pos[0]+1)-1), (longueur_case*pos[1]+1):(longueur_case*(pos[1]+1)-1), :] = np.array([100, 255, 100])
 images = [img_t]
 
-# Display
-# cv2.imshow("Reinforcement learning Algorithm", img_t)
-# start_time = time.time()
-# while time.time() - start_time < tps_attente:
-#     pass
+
 
 # Test the values
 while not(fin) and nb_couts < 100:
@@ -155,9 +151,6 @@ while not(fin) and nb_couts < 100:
     # temps d'attente pour l'affichage
     img_t = copy.copy(img)
     img_t[(longueur_case*pos[0]+1):(longueur_case*(pos[0]+1)-1), (longueur_case*pos[1]+1):(longueur_case*(pos[1]+1)-1), :] = np.array([100, 255, 100])
-    # cv2.imshow("Reinforcement learning Algorithm", img_t)
     images.append(img_t)
-    # while time.time() - start_time < tps_attente:
-    #     pass
 
-imageio.mimsave("partie.gif", images)
+imageio.mimsave("grille_4x4_initiale.gif", images)
