@@ -61,27 +61,39 @@ def application_action(grille_jeu, a, pos_i):
             pos_t[1] -= 1
     # Interaction environnement
     if grille_jeu[pos_t[0]][pos_t[1]] == -1:  # dragons
-        reward = -50
-        fin = False
+        reward = -20
+        fin = True
     elif grille_jeu[pos_t[0]][pos_t[1]] == 1:
-        reward = 50
+        reward = 100
         fin = True        
     else:
         fin = False
         if pos_t == pos_i:
-            reward = -20
-        else:
             reward = -5
+        else:
+            reward = -1
     return pos_t, reward, fin
 
 
-def choix_action(state, eps):
+def choix_action(state, eps, interdit):
     p_action = random.random()
     if p_action < eps:
         return random.randrange(4)
     else:
         with torch.no_grad():
-            return policy_net(state).max(1)[1].item()
+            nouvelle_action = policy_net(state).max(1)[1].item()
+            if interdit == []:
+                return nouvelle_action
+            while abs(interdit[-1]-nouvelle_action) == 2:
+                nouvelle_action = random.randrange(4)
+            return nouvelle_action
+
+
+def choix_start_pos(buffer, eps=0.5):
+    if random.random() < eps:
+        return random.choice(buffer)
+    else:
+        return buffer[0]
 
 
 def generate_img_grille(taille_grille, pos, taille_ideale=100):
@@ -147,21 +159,22 @@ def soft_update(model, target_model, tau):
 torch.manual_seed(1)
 
 # 
-taille_grille = 6
+taille_grille = 8
 starting_pos = [0, 0]
-grille_jeu = generate_grille_jeu(taille_grille, 10, starting_pos)
+# buffer = [[0, 0]]
+grille_jeu = generate_grille_jeu(taille_grille, 20, starting_pos)
 actions = [0, 1, 2, 3]
-nb_test = 1
+nb_test = 0
 
 print(grille_jeu)
 
 
 # set remaining variables
-epochs = 2000
-learning_rate = 5e-4
+epochs = 5000
+learning_rate = 1e-4
 starting_pos = [0, 0]
-gamma = 0.7
-tau = 0.2
+gamma = 1.5
+tau = 0.25
 device = "cpu"
 
 
@@ -170,31 +183,31 @@ target_net = DQN(100, 100, 4).to(device)
 target_net.load_state_dict(policy_net.state_dict())
 target_net.eval()
 
-optimizer = optim.SGD(policy_net.parameters(), lr=learning_rate)
+optimizer = optim.Adam(policy_net.parameters(), lr=learning_rate)
+
 epoch = 0
 
 
-while epoch < epochs :
+while epoch < epochs:
     epoch += 1
-    # for epoch in range(epochs):
     nb_couts = 0
     fin = False
+    # pos = choix_start_pos(buffer, eps=0.5)
     pos = copy.copy(starting_pos)
-    while nb_couts < 50 and not(fin):
+    replay_action = []
+    while nb_couts < 100 and not(fin):
         nb_couts += 1
         # Application du modèle à l'état q_etat
         state = generate_img_grille(taille_grille, pos)
         pred = policy_net(state)
         # Random choice of action - epsilon-greedy
         epsilon = epochs/(epochs+epoch)
-        a_t = choix_action(state, eps=epsilon)
+        a_t = choix_action(state, eps=epsilon, interdit=replay_action)
         # Application de l'action
         pos_future, reward, fin = application_action(grille_jeu, a_t, pos)
         state_futur = generate_img_grille(taille_grille, pos_future)
         # Application du modèle à l'état q_etat_futur
-        pred_action_future = torch.argmax(policy_net(state_futur)).item()
-        pred_future = target_net(state_futur)[0][pred_action_future]
-        # pred_future = target_net(state_futur).max()
+        pred_future = target_net(state_futur).max()
         # get loss
         y_target = pred[0][a_t]
         y_eval = reward + gamma*pred_future*(1-fin)
@@ -206,13 +219,16 @@ while epoch < epochs :
         optimizer.step()
         # Update parameters
         pos = pos_future
-    if epoch % 5 == 0:
+        replay_action.append(a_t)
+    # if reward == 100:
+    #     buffer += replay_pos[1:]
+    if epoch % 10 == 0:
         soft_update(policy_net, target_net, 1e-3)
     else:
         # Update stable model
         soft_update(policy_net, target_net, tau)
     if epoch % 100 == 0:
-        print(epoch, policy_net(state_futur))
+        print(epoch, pred)
 
 # Initial picture
 taille_ideale = 500

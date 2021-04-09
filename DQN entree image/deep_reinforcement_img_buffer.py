@@ -10,6 +10,8 @@ import random
 import imageio
 # Sauvegarde image numpy
 from PIL import Image
+import collections
+
 
 
 
@@ -149,22 +151,25 @@ torch.manual_seed(1)
 # 
 taille_grille = 5
 starting_pos = [0, 0]
-buffer = []
-grille_jeu = generate_grille_jeu(taille_grille, 7, starting_pos)
+grille_jeu = generate_grille_jeu(taille_grille, 8, starting_pos)
 actions = [0, 1, 2, 3]
-nb_test = 2
+nb_test = 0
 
 print(grille_jeu)
 
 
+# Memory buffer
+# Experience replay
+max_buffer = 200
+buffer = collections.deque([], maxlen=max_buffer)
+
 # set remaining variables
 epochs = 250
-learning_rate = 1e-3
+learning_rate = 1e-4
 starting_pos = [0, 0]
-gamma = 2
+gamma = 0.7
 tau = 0.2
 device = "cpu"
-
 
 policy_net = DQN(100, 100, 4).to(device)
 target_net = DQN(100, 100, 4).to(device)
@@ -182,29 +187,84 @@ while epoch < epochs:
     nb_couts = 0
     fin = False
     pos = copy.copy(starting_pos)
+    epsilon = epochs/(epochs+epoch)
     while nb_couts < 100 and not(fin):
         nb_couts += 1
         # Application du modèle à l'état q_etat
         state = generate_img_grille(taille_grille, pos)
         pred = policy_net(state)
         # Random choice of action - epsilon-greedy
-        epsilon = epochs/(epochs+epoch)
         a_t = choix_action(state, eps=epsilon)
         # Application de l'action
         pos_future, reward, fin = application_action(grille_jeu, a_t, pos)
+        state_futur = generate_img_grille(taille_grille, pos_future)
         # Application du modèle à l'état q_etat_futur
-        buffer.append((pos, a_t, reward, fin))
+        pred_action_future = torch.argmax(policy_net(state_futur)).item()
+        pred_future = target_net(state_futur)[0][pred_action_future]
+        # get loss
+        reward = torch.tensor(reward, dtype=torch.float32)
+        y_target = pred[0][a_t]
+        y_eval = reward + gamma*pred_future*(1-fin)
+        # F.mse_loss() ou F.smooth_l1_loss()
+        loss = F.smooth_l1_loss(y_target, y_eval)
+        # perform backpropagation
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
         # Update parameters
         pos = pos_future
+        # Sauvegarde Buffer
+        if fin:
+            buffer.append((pos, a_t, reward, None))
+        else:
+            buffer.append((pos, a_t, reward, pos_future))
+    # /---- UPDATE TARGET NETWORK -----/
+    if epoch % 5 == 0:
+        soft_update(policy_net, target_net, 1e-3)
+    else:
+        soft_update(policy_net, target_net, tau)
     # /---- BUFFER EXPERIENCE -----/
-    if len(buffer) > 50:
-        experience = random.sample(buffer, 50)
-        for pos, a_t, reward, fin in experience:
+    if len(buffer) > 5:
+        nb_replay = 5
+    else:
+        nb_replay = len(buffer)
+    # Sample buffer experience
+    experience = random.sample(buffer, nb_replay)
+    for exp in experience:
+        buffer.remove(exp)
+        pos, a_t, reward, pos_future = exp
+        # Application du modèle pour cette expérience
+        state = generate_img_grille(taille_grille, pos)
+        pred = policy_net(state)
+        if pos_future != None:
+            state_futur = generate_img_grille(taille_grille, pos_future)
+            pred_action_future = torch.argmax(policy_net(state_futur)).item()
+            pred_future = target_net(state_futur)[0][pred_action_future]
+            y_eval = reward + gamma*pred_future
+            fin = False
+        else:
+            y_eval = reward
+            fin = True
+        # get loss
+        y_target = pred[0][a_t]
+        loss = F.smooth_l1_loss(y_target, y_eval)
+        # perform backpropagation
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        nb_couts = 1
+        pos = pos_future
+        # Poursuite de la partie
+        while nb_couts < 100 and not(fin):
+            nb_couts += 1
             # Application du modèle à l'état q_etat
             state = generate_img_grille(taille_grille, pos)
             pred = policy_net(state)
-            # Application du modèle à l'état futur
-            pos_future, _, _ = application_action(grille_jeu, a_t, pos)
+            # Random choice of action - epsilon-greedy
+            a_t = choix_action(state, eps=epsilon)
+            # Application de l'action
+            pos_future, reward, fin = application_action(grille_jeu, a_t, pos)
+            # Application du modèle à l'état q_etat_futur
             state_futur = generate_img_grille(taille_grille, pos_future)
             pred_action_future = torch.argmax(policy_net(state_futur)).item()
             pred_future = target_net(state_futur)[0][pred_action_future]
@@ -217,9 +277,7 @@ while epoch < epochs:
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-    # /---- BUFFER SIZE -----/
-    if len(buffer) > 50:
-        buffer = random.sample(buffer, 50)
+            pos = pos_future
     if epoch % 5 == 0:
         soft_update(policy_net, target_net, 1e-3)
     else:
