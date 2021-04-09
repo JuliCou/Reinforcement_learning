@@ -153,7 +153,7 @@ taille_grille = 5
 starting_pos = [0, 0]
 grille_jeu = generate_grille_jeu(taille_grille, 8, starting_pos)
 actions = [0, 1, 2, 3]
-nb_test = 0
+nb_test = 2
 
 print(grille_jeu)
 
@@ -164,11 +164,11 @@ max_buffer = 200
 buffer = collections.deque([], maxlen=max_buffer)
 
 # set remaining variables
-epochs = 250
-learning_rate = 1e-4
+epochs = 2000
+learning_rate = 1e-3
 starting_pos = [0, 0]
-gamma = 0.7
-tau = 0.2
+gamma = 0.1
+tau = 0.5
 device = "cpu"
 
 policy_net = DQN(100, 100, 4).to(device)
@@ -188,6 +188,7 @@ while epoch < epochs:
     fin = False
     pos = copy.copy(starting_pos)
     epsilon = epochs/(epochs+epoch)
+    suivi_case = [pos]
     while nb_couts < 100 and not(fin):
         nb_couts += 1
         # Application du modèle à l'état q_etat
@@ -197,6 +198,8 @@ while epoch < epochs:
         a_t = choix_action(state, eps=epsilon)
         # Application de l'action
         pos_future, reward, fin = application_action(grille_jeu, a_t, pos)
+        if pos_future in suivi_case:
+            reward = -5
         state_futur = generate_img_grille(taille_grille, pos_future)
         # Application du modèle à l'état q_etat_futur
         pred_action_future = torch.argmax(policy_net(state_futur)).item()
@@ -212,6 +215,7 @@ while epoch < epochs:
         loss.backward()
         optimizer.step()
         # Update parameters
+        suivi_case.append(pos_future)
         pos = pos_future
         # Sauvegarde Buffer
         if fin:
@@ -233,6 +237,7 @@ while epoch < epochs:
     for exp in experience:
         buffer.remove(exp)
         pos, a_t, reward, pos_future = exp
+        suivi_case = [pos]
         # Application du modèle pour cette expérience
         state = generate_img_grille(taille_grille, pos)
         pred = policy_net(state)
@@ -264,6 +269,8 @@ while epoch < epochs:
             a_t = choix_action(state, eps=epsilon)
             # Application de l'action
             pos_future, reward, fin = application_action(grille_jeu, a_t, pos)
+            if pos_future in suivi_case:
+                reward = -5
             # Application du modèle à l'état q_etat_futur
             state_futur = generate_img_grille(taille_grille, pos_future)
             pred_action_future = torch.argmax(policy_net(state_futur)).item()
@@ -277,6 +284,7 @@ while epoch < epochs:
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            suivi_case.append(pos_future)
             pos = pos_future
     if epoch % 5 == 0:
         soft_update(policy_net, target_net, 1e-3)
