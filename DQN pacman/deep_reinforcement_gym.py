@@ -10,6 +10,7 @@ import random
 import gym
 
 
+
 # if gpu is to be used
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -75,6 +76,8 @@ screen = get_screen()
 screen_h, screen_w = screen.shape[2:]
 n_actions = env.action_space.n
 
+
+
 # set remaining variables
 epochs = 100
 learning_rate = 1e-3
@@ -95,25 +98,19 @@ optimizer = optim.Adam(policy_net.parameters(), lr=learning_rate)
 epoch = 0
 
 
-
-best_model = copy.copy(policy_net)
-score_suivi = []
-
-while epoch < epochs:
+while epoch < 100:
     epoch += 1
     # Initialize the environment and state
     env.reset()
-    last_screen = get_screen()
     current_screen = get_screen()
-    state = current_screen - last_screen
+    epsilon = epochs/(epochs+epoch)
     nb_couts = 0
     done = False
     nb_vie = 3
     while not(done) and nb_couts < 1000:
         nb_couts += 1
         # Random choice of action - epsilon-greedy
-        epsilon = epochs/(epochs+epoch)
-        a_t = choix_action(state, eps=epsilon)
+        a_t = choix_action(current_screen, eps=epsilon)
         # Application de l'action
         _, reward, done, info = env.step(a_t)
         reward = torch.tensor([reward], device=device)
@@ -131,11 +128,9 @@ while epoch < epochs:
         # Observe new state
         last_screen = current_screen
         current_screen = get_screen()
-        next_state = current_screen - last_screen
         # Predictions
-        pred = policy_net(state)
-        pred_future = target_net(next_state).max()
-        state = next_state
+        pred = policy_net(last_screen)
+        pred_future = target_net(current_screen).max()
         # get loss
         y_target = pred[0][a_t]
         y_eval = reward + gamma*pred_future*(1-fin)
@@ -149,27 +144,11 @@ while epoch < epochs:
         soft_update(policy_net, target_net, tau)
     if epoch % 5 == 0:
         soft_update(policy_net, target_net, 1e-3)
-    if epoch % 5 == 0:
-        env.reset()
-        current_screen = get_screen()
-        done = False
-        rec = 0
-        while not(done):
-            with torch.no_grad():
-                a_t = policy_net(current_screen).max(1)[1].item()
-            # Application de l'action
-            _, reward, done, _ = env.step(a_t)
-            rec += reward
-            # Observe new state
-            current_screen = get_screen()
-        score_suivi.append(rec)
-        print(epoch, rec)
-        if rec == max(score_suivi):
-            best_model = copy.copy(policy_net)
+    print(epoch)
+
 
 
 torch.save(policy_net.state_dict(), "model.pt")
-torch.save(best_model.state_dict(), "best_model.pt")
 model = DQN(screen_h, screen_w, n_actions)
 model.load_state_dict(torch.load("model.pt"))
 model.eval()

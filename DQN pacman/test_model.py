@@ -62,7 +62,7 @@ done = False
 rec = 0
 temps = time.time()
 while not(done):
-    while time.time() - temps < 0.02:
+    while time.time() - temps < 0.2:
         pass
     temps = time.time()
     env.render()
